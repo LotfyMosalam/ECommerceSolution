@@ -1,28 +1,27 @@
-import { TestBed } from '@angular/core/testing';
-import { AuthService } from './auth.service';
-import { HttpClientTestingModule, HttpTestingController } from '@angular/common/http/testing';
+using ECommerce.Infrastructure.Repositories;
+using ECommerce.Infrastructure.Data;
+using Microsoft.EntityFrameworkCore;
+using ECommerce.Core.Entities;
+using Xunit;
 
-describe('AuthService', () => {
-  let service: AuthService;
-  let httpMock: HttpTestingController;
+public class ProductRepositoryTests
+{
+    [Fact]
+    public async Task AddAsync_ShouldAddProduct()
+    {
+        var options = new DbContextOptionsBuilder<ECommerceDbContext>()
+            .UseInMemoryDatabase(databaseName: "TestDB")
+            .Options;
 
-  beforeEach(() => {
-    TestBed.configureTestingModule({
-      imports: [HttpClientTestingModule],
-      providers: [AuthService]
-    });
-    service = TestBed.inject(AuthService);
-    httpMock = TestBed.inject(HttpTestingController);
-  });
+        using var context = new ECommerceDbContext(options);
+        var repo = new ProductRepository(context);
 
-  it('should login and store token', () => {
-    service.login('user', 'pass').subscribe();
+        var product = new Product { Name = "Test", Category = "Cat", ProductCode = "P01", Price = 10, MinimumQuantity = 1, DiscountRate = 0.1M };
 
-    const req = httpMock.expectOne('https://localhost:5001/api/auth/login');
-    expect(req.request.method).toBe('POST');
+        await repo.AddAsync(product);
+        var products = await repo.GetAllAsync();
 
-    req.flush({ accessToken: 'fakeToken', refreshToken: 'fakeRefresh' });
-
-    expect(service.token).toBe('fakeToken');
-  });
-});
+        Assert.Single(products);
+        Assert.Equal("Test", products.First().Name);
+    }
+}
